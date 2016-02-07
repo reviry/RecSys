@@ -1,7 +1,15 @@
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-def matrix_factorization(R, M, P, Q, K, steps=10000, alpha=0.3, gamma=0.0001, lambda_=0.02):
+"""
+NMF with complemented matrix
+proposed NMF: missing ratings is complemented by expected ratings
+Devooght's NMF: missing ratings is complemented by 0
+"""
+
+def matrix_factorization(R, M, P, Q, K, gamma, lambda_=0.1, steps=30):
+    start = time.time()
     Q = Q.T
     # x = []
     # y = []
@@ -10,8 +18,8 @@ def matrix_factorization(R, M, P, Q, K, steps=10000, alpha=0.3, gamma=0.0001, la
             for j in xrange(R.shape[1]):
                 eij = (R[i][j] - np.dot(P[i,:], Q[:,j])) * M[i][j]
                 for k in xrange(K):
-                    gradient_p = -2 * eij * Q[k][j] + lambda_ * P[i][k]
-                    gradient_q = -2 * eij * P[i][k] + lambda_ * Q[k][j]
+                    gradient_p = -2 * eij * Q[k][j] + 2 * lambda_ * P[i][k]
+                    gradient_q = -2 * eij * P[i][k] + 2 * lambda_ * Q[k][j]
                     if P[i][k] - gamma * gradient_p >= 0:
                         P[i][k] = P[i][k] - gamma * gradient_p
                     if Q[k][j] - gamma * gradient_q >= 0:
@@ -20,13 +28,16 @@ def matrix_factorization(R, M, P, Q, K, steps=10000, alpha=0.3, gamma=0.0001, la
         e = 0
         for i in xrange(R.shape[0]):
             for j in xrange(R.shape[1]):
-                e = e + pow(R[i][j] - eR[i][j], 2) * M[i][j]
+                e += pow(R[i][j] - eR[i][j], 2) * M[i][j]
                 for k in xrange(K):
-                    e = e + (lambda_ / 2) * (pow(P[i][k], 2) + pow(Q[k][j], 2))
+                    e += lambda_ * (pow(P[i][k], 2) + pow(Q[k][j], 2))
+        e = e / 10000.0
         # x.append(step)
         # y.append(e)
-        if e < 0.001:
+        if e < 0.1:
             break
     # plt.plot(x, y)
     # plt.show()
+    elapsed_time = time.time() - start
+    print ("elapsed_time:{0}".format(elapsed_time)) + "[sec]"
     return P, Q.T
